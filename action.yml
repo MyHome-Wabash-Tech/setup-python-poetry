@@ -1,0 +1,42 @@
+name: "Setup Python Poetry"
+description: "Setup both python and poetry for your workflow, and install dependencies"
+inputs:
+  python-version:
+    description: "Version of python to use"
+    required: true
+  install-args:
+    description: "Arguments to pass to poetry install"
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v2.3.4
+
+    - name: Setup Python 3.9
+      uses: actions/setup-python@v2.2.2
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install poetry
+      uses: snok/install-poetry@v1.2.0
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2.1.6
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+    # Temporary workaround until conditionals are supported in GitHub Composite
+    # actions. Look here for more: https://github.com/actions/runner/issues/834
+    - name: Install dependencies with poetry
+      run: |
+        if echo ${{ steps.cache.outputs.cache-hit }} | grep -c "true"
+        then
+          echo "Cache hit - skipping dependency installation"
+        else
+          poetry install ${{ inputs.install-args }}
+        fi
+      shell: bash
